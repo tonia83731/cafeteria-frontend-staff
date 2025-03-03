@@ -1,14 +1,11 @@
-// import StaffCouponModals from "@/components/coupon-page/StaffCouponModals";
 import { clientFetch, serverFetch } from "@/lib/fetch";
 import StaffSearch from "@/components/input/StaffSearch";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import CouponItem, {
-  CouponItemProps,
-} from "@/components/coupon-page/CouponItem";
 import CouponModals from "@/components/coupon-page/CouponModals";
 import { useState } from "react";
 import { getCookie } from "cookies-next";
 import { toast } from "react-toastify";
+import CouponTable from "@/components/coupon-page/CouponTable";
 export type LanguageOptions = {
   value: "zh" | "en";
   label: string;
@@ -23,8 +20,7 @@ export const language_options: LanguageOptions[] = [
     label: "英文版",
   },
 ];
-const DashboardCouponsPage = ({ categories, coupons }: any) => {
-  // console.log(coupons);
+const DashboardCouponsPage = ({ coupons }: any) => {
   const token = getCookie("adminToken");
   const [modalToggle, setModalToggle] = useState(false);
   const [modalType, setModalType] = useState<"create" | "edit" | null>(null);
@@ -32,7 +28,7 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
     language_options[0]
   );
   const [inputValue, setInputValue] = useState("");
-  const [couponCards, setCouponCards] = useState(coupons);
+  const [couponDatas, setCouponDatas] = useState(coupons);
   const [coupon, setCoupon] = useState(null);
 
   const handleLanguageSwitch = () => {
@@ -51,12 +47,11 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
         item.title.en.toLowerCase().includes(inputValue.toLowerCase()) ||
         item.code.toLowerCase().includes(inputValue.toLowerCase())
     );
-    // console.log(filter_coupons);
-    setCouponCards(filter_coupons);
+    setCouponDatas(filter_coupons);
   };
   const handleClearClick = () => {
     if (inputValue === "") return;
-    setCouponCards(coupons);
+    setCouponDatas(coupons);
     setInputValue("");
   };
 
@@ -67,7 +62,6 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
       const response = await clientFetch(`/admin/coupons/${couponId}`, {
         token,
       });
-      // console.log(response.data);
       if (response.success) {
         setCoupon(response.data);
       }
@@ -77,9 +71,8 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
   };
 
   const handleDeleteClick = async (couponId: number) => {
-    console.log(couponId);
     try {
-      const response = await clientFetch(`/admin/coupons/${couponId}`, {
+      const response = await clientFetch(`/admin/coupons/${couponId}/deleted`, {
         method: "DELETE",
         token,
       });
@@ -89,7 +82,7 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
         const update_coupons = coupons.filter(
           (coupon: any) => coupon.id !== couponId
         );
-        setCouponCards(update_coupons);
+        setCouponDatas(update_coupons);
       } else {
         toast.error("優惠券刪除失敗，請在試一次!");
       }
@@ -105,7 +98,9 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
   ) => {
     try {
       const url =
-        type === "create" ? "/admin/coupons" : `/admin/coupons/${couponId}`;
+        type === "create"
+          ? "/admin/coupons/add"
+          : `/admin/coupons/${couponId}/updated`;
       const response = await clientFetch(url, {
         method: type === "create" ? "POST" : "PUT",
         body,
@@ -113,13 +108,13 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
       });
       if (response.success) {
         if (type === "create") {
-          setCouponCards([...couponCards, response.data]);
+          setCouponDatas([...couponDatas, response.data]);
           return {
             status: true,
             message: "優惠券新增成功!",
           };
         } else {
-          setCouponCards((prevCoupon: any) =>
+          setCouponDatas((prevCoupon: any) =>
             prevCoupon.map((coupon: any) =>
               coupon.id === couponId ? response.data : coupon
             )
@@ -146,6 +141,28 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
       console.log(error);
     }
   };
+  const handlePublishedSwitch = async (couponId: number) => {
+    try {
+      const response = await clientFetch(
+        `/admin/coupons/${couponId}/published`,
+        {
+          method: "PATCH",
+          token,
+        }
+      );
+      if (response.success) {
+        const updated_coupons = couponDatas.map((coupon: any) => {
+          return coupon.id === couponId
+            ? { ...coupon, isPublished: true }
+            : coupon;
+        });
+        setCouponDatas(updated_coupons);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="mb-4 gap-4 flex justify-between items-end">
@@ -179,19 +196,13 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
           onClearClick={handleClearClick}
         />
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {couponCards.map((coupon: CouponItemProps) => {
-          return (
-            <CouponItem
-              {...coupon}
-              key={coupon.id}
-              language={language.value}
-              onCouponEditClick={handleEditClick}
-              onCouponDeleteClick={handleDeleteClick}
-            />
-          );
-        })}
-      </div>
+      <CouponTable
+        tableData={couponDatas}
+        language={language.value}
+        onCouponEdit={handleEditClick}
+        onCouponDelete={handleDeleteClick}
+        onCouponPublished={handlePublishedSwitch}
+      />
       {modalToggle && (
         <CouponModals
           type={modalType}
@@ -199,7 +210,6 @@ const DashboardCouponsPage = ({ categories, coupons }: any) => {
             setModalToggle(false);
             setModalType(null);
           }}
-          categories={categories}
           coupon={coupon}
           onFormSubmit={handleFormSubmit}
         />
@@ -213,22 +223,10 @@ export default DashboardCouponsPage;
 export async function getServerSideProps(context: any) {
   // const coupons = await serverFetch(context, `/api/admin/coupons`, "GET");
   // console.log(coupons);
-  const [categories, coupons] = await Promise.all([
-    serverFetch(context, `/api/admin/categories`, "GET"),
-    await serverFetch(context, `/api/admin/coupons`, "GET"),
-  ]);
-  const cate_matched = [null, null, "咖啡", "茶飲", "冰品", "甜點"];
-  const category_data = categories.data.map(
-    ({ id, code }: { id: number; code: string }) => ({
-      id,
-      title: cate_matched[id - 1],
-      code,
-    })
-  );
+  const coupons = await serverFetch(context, `/api/admin/coupons`, "GET");
 
   return {
     props: {
-      categories: category_data,
       coupons: coupons.data,
     },
   };

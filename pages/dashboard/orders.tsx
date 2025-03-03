@@ -3,103 +3,73 @@ import { getCookie } from "cookies-next";
 import { toast } from "react-toastify";
 import { clientFetch, serverFetch } from "@/lib/fetch";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import OrderTable from "@/components/order-page/OrderTable";
+import OrderTable, { OrderTableType } from "@/components/order-page/OrderTable";
 const DashboardOrdersPage = ({ orders }: any) => {
-  console.log(orders);
-  const [orderTable, setOrderTable] = useState(orders);
+  const [orderDatas, setOrderDatas] = useState(orders);
   const token = getCookie("adminToken");
-  const status_data = [
-    "pending",
-    "preparing",
-    "delivering",
-    "picking up",
-    "completed",
-  ];
 
-  const handleStatusUpdated = async (
-    orderId: number,
-    shippingId: number,
-    status: string
-  ) => {
-    // console.log(orderId, shippingId, status);
-    if (status === "completed") {
-      toast.warning("訂單已完成，無法更新狀態");
+  const handleStatusUpdated = async (orderId: number, status: number) => {
+    if (status === 3) {
+      toast.error("訂單已完成，無法更新!");
       return;
     }
-    if (status === "canceled") {
-      toast.warning("訂單已取消，無法更新狀態");
+    if (status === 4) {
+      toast.error("訂單已取消，無法更新!");
       return;
-    }
-
-    const currIndex = status_data.indexOf(status);
-
-    if (currIndex === -1) {
-      toast.error("訂單無效，無法更新狀態");
-      return;
-    }
-
-    let nextStatus: string;
-
-    if (status === "preparing") {
-      if (shippingId === 1) {
-        nextStatus = "picking up";
-      } else {
-        nextStatus = "delivering";
-      }
-    } else if (status === "delivering") {
-      nextStatus = status_data[currIndex + 2];
-    } else {
-      nextStatus = status_data[currIndex + 1];
     }
 
     try {
-      const response = await clientFetch(`/admin/orders/${orderId}`, {
-        method: "PUT",
-        body: {
-          status: nextStatus,
-        },
-        token,
-      });
+      const response = await clientFetch(
+        `/admin/orders/${orderId}/updated-status`,
+        {
+          method: "PATCH",
+          token,
+          body: {
+            status: status + 1,
+          },
+        }
+      );
 
-      if (response.success) {
-        setOrderTable((prevOrders: any[]) =>
-          prevOrders.map((order) =>
-            order.id === orderId ? { ...order, status: nextStatus } : order
-          )
-        );
-        toast.success("訂單已更新");
-      } else {
-        toast.error("訂單更新失敗，請在試一次!");
+      if (response?.success) {
+        const updated_orders = orderDatas.map((order: OrderTableType) => {
+          return order.id === orderId
+            ? { ...order, status: status + 1 }
+            : order;
+        });
+        setOrderDatas(updated_orders);
       }
     } catch (error) {
       console.log(error);
     }
   };
 
-  const handleStatusCanceled = async (orderId: number, status: string) => {
-    if (status !== "pending") {
-      toast.warning("訂單已開始製作無法取消!");
+  const handleStatusCanceled = async (orderId: number, status: number) => {
+    if (status >= 1) {
+      toast.error("訂單處理中，已無法取消!");
+      return;
+    }
+    if (status === 3) {
+      toast.error("訂單已完成，已無法取消!");
       return;
     }
 
     try {
-      const response = await clientFetch(`/admin/orders/${orderId}`, {
-        method: "PUT",
-        body: {
-          status: "canceled",
-        },
-        token,
-      });
+      const response = await clientFetch(
+        `/admin/orders/${orderId}/updated-status`,
+        {
+          method: "PATCH",
+          token,
+          body: {
+            status: 4,
+          },
+        }
+      );
 
-      if (response.success) {
-        setOrderTable((prevOrders: any[]) =>
-          prevOrders.map((order) =>
-            order.id === orderId ? { ...order, status: "canceled" } : order
-          )
-        );
-        toast.success("訂單已取消");
-      } else {
-        toast.error("訂單取消失敗，請在試一次!");
+      if (response?.success) {
+        const updated_orders = orderDatas.map((order: OrderTableType) => {
+          return order.id === orderId ? { ...order, status: 4 } : order;
+        });
+        setOrderDatas(updated_orders);
       }
     } catch (error) {
       console.log(error);
@@ -109,7 +79,7 @@ const DashboardOrdersPage = ({ orders }: any) => {
     <DashboardLayout>
       <h1 className="text-2xl md:text-4xl font-bold mb-4">訂單列表</h1>
       <OrderTable
-        tableData={orderTable}
+        tableData={orderDatas}
         onStatusUpdated={handleStatusUpdated}
         onStatusCanceled={handleStatusCanceled}
       />

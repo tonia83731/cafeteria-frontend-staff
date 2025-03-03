@@ -47,12 +47,30 @@ const DashboardProductsPage = ({ categories, products }: any) => {
       );
       // console.log(response);
       const product_data = response.data.map(
-        ({ id, categoryCode, title, description, price }: any) => ({
+        ({
           id,
           categoryCode,
+          image,
           title,
+          title_en,
           description,
+          description_en,
           price,
+          isPublished,
+        }: any) => ({
+          id,
+          categoryCode,
+          image,
+          title: {
+            zh: title,
+            en: title_en,
+          },
+          description: {
+            zh: description,
+            en: description_en,
+          },
+          price,
+          isPublished,
         })
       );
       // console.log(product_data);
@@ -201,6 +219,11 @@ const DashboardProductsPage = ({ categories, products }: any) => {
       }
     }
   };
+
+  const handleProductPublished = async (
+    productId: number,
+    isPublished: boolean
+  ) => {};
   return (
     <DashboardLayout>
       <div className="mb-4 gap-4 flex justify-between items-center">
@@ -245,6 +268,7 @@ const DashboardProductsPage = ({ categories, products }: any) => {
         language={language.value}
         onProductEdit={handleProductEdit}
         onProductDelete={handleProductDelete}
+        onProductPublished={handleProductPublished}
       />
       {modalToggle && (
         <ProductModals
@@ -266,12 +290,9 @@ const DashboardProductsPage = ({ categories, products }: any) => {
 export default DashboardProductsPage;
 
 export async function getServerSideProps(context: any) {
-  const [categories, products, sizes, ices, sugars] = await Promise.all([
+  const [categories, products] = await Promise.all([
     serverFetch(context, `/api/admin/categories`, "GET"),
     serverFetch(context, `/api/admin/products`, "GET"),
-    serverFetch(context, `/api/admin/sizes`, "GET"),
-    serverFetch(context, `/api/admin/ices`, "GET"),
-    serverFetch(context, `/api/admin/sugars`, "GET"),
   ]);
 
   const cate_matched = [null, null, "咖啡", "茶飲", "冰品", "甜點"];
@@ -295,35 +316,37 @@ export async function getServerSideProps(context: any) {
   ];
 
   const product_data = products.data.map(
-    ({ id, categoryCode, title, description, price }: any) => ({
+    ({
       id,
+      image,
       categoryCode,
       title,
+      title_en,
       description,
+      description_en,
       price,
+      isPublished,
+    }: any) => ({
+      id,
+      image,
+      categoryCode,
+      title: {
+        zh: title,
+        en: title_en,
+      },
+      description: {
+        zh: description,
+        en: description_en,
+      },
+      price,
+      isPublished,
     })
   );
-
-  const sizes_data = sizes.data.map(({ id, title }: any) => ({
-    id,
-    title: title.zh,
-  }));
-  const ices_data = ices.data.map(({ id, title }: any) => ({
-    id,
-    title: title.zh,
-  }));
-  const sugars_data = sugars.data.map(({ id, title }: any) => ({
-    id,
-    title: title.zh,
-  }));
 
   return {
     props: {
       categories: category_data,
       products: product_data,
-      sizes: sizes_data,
-      ices: ices_data,
-      sugars: sugars_data,
     },
   };
 }

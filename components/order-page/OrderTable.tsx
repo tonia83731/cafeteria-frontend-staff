@@ -9,59 +9,85 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { CiCircleMore } from "react-icons/ci";
-import { BiSolidDisc } from "react-icons/bi";
-import StaffModals from "../layout/StaffModals";
+import { IoIosArrowDown } from "react-icons/io";
 import {
   MdOutlineKeyboardArrowLeft,
   MdOutlineKeyboardArrowRight,
   MdOutlineKeyboardDoubleArrowLeft,
   MdOutlineKeyboardDoubleArrowRight,
 } from "react-icons/md";
+import { orderStatus, paymentOpts, shippingOpts } from "@/data/status-option";
+import dayjs from "dayjs";
+import { iceOpts, sizeOpts, sugarOpts } from "@/data/product-options";
 
-type OrderTableType = {
+export type OrderTableType = {
   id: number;
+  status: number;
   userId: number;
-  totalPrice: number;
-  status: string;
-  orderer: {
+  User: {
     name: string;
     phone: string;
     email: string;
-  };
-  recipient: {
-    name: string;
-    phone: string;
-    address: string;
-  };
-  payment: string;
-  shipping: string;
-  shippingId: number;
-  discount: {
-    title: string;
-    code: string;
+  }; // orderer
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+  payment: number;
+  shipping: number;
+  productPrice: number;
+  discountId: number | null;
+  discountPrice: number;
+  Discount: {
+    Coupon: {
+      code: string;
+      discountType: number;
+      discountValue: number;
+      title: string;
+    };
+    id: number;
+    couponId: number;
+    userId: number;
+    isApplied: true;
+    updatedAt: string;
+    createdAt: string;
   } | null;
-  orderItems: {
-    name: string;
+  tax: number;
+  total: number;
+  OrderItems: {
+    orderId: number;
+    productId: number;
+    Product: {
+      title: string;
+      title_en: string;
+      price: number;
+    };
     quantity: number;
+    size: number | null;
+    sugar: number | null;
+    ice: number | null;
     price: number;
+    createdAt: string;
+    updatedAt: string;
+  }[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type OrderDetailType = {
+  productPrice: number;
+  discountCode: string | null;
+  discountPrice: number;
+  tax: number;
+  total: number;
+  orderItems: {
+    title: string;
+    quantity: number;
     size: string | null;
     sugar: string | null;
     ice: string | null;
+    price: number;
   }[];
 };
-
-const ORDERTABLEMAP = [
-  // ["id", "ID"],
-  ["orderer", "訂購人資料"], // 2 //m //t
-  ["recipient", "收貨人資料"], // 2 //m //t
-  ["orderItems", "訂單資料"], // 2
-  ["payment", "付款方式"], // 1 //t
-  ["shipping", "運送方式"], // 1 //t
-  ["discount", "折價券"], // 1
-  ["totalPrice", "總金額"], // 1 //m //t
-  ["status", "訂單狀態"], // 1 //m //t
-];
 
 const OrderTable = ({
   tableData,
@@ -69,157 +95,158 @@ const OrderTable = ({
   onStatusCanceled,
 }: {
   tableData: OrderTableType[];
-  onStatusUpdated: (
-    orderId: number,
-    shippingId: number,
-    status: string
-  ) => void;
-  onStatusCanceled: (orderId: number, status: string) => void;
+  onStatusUpdated: (orderId: number, status: number) => void;
+  onStatusCanceled: (orderId: number, status: number) => void;
 }) => {
-  // console.log(tableData);
   const [sourceSorting, setSourceSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 25,
   });
-  const [modalToggle, setModalToggle] = useState(false);
-  const [orderDetail, setOrderDetail] = useState<OrderTableType | null>(null);
+  const [modalToggle, setModalToggle] = useState<{
+    status: boolean;
+    id: number | null;
+  }>({
+    status: false,
+    id: null,
+  });
+  const [orderDetail, setOrderDetail] = useState<OrderDetailType | null>(null);
 
   const columnHelper = createColumnHelper<any>();
-  const columns = ORDERTABLEMAP.map((tHead: string[]) => {
-    if (tHead[0] === "orderer") {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => (
-          <ul className="flex flex-col gap-0.5 px-2">
-            <li className="font-bold">{info.getValue()["name"]}</li>
-            <li className="pl-0.5 text-xs">- {info.getValue()["phone"]}</li>
-            <li className="pl-0.5 text-xs">- {info.getValue()["email"]}</li>
+
+  const columns = [
+    columnHelper.accessor("orderers", {
+      id: "orderers",
+      header: () => <span className="">訂購人資訊</span>,
+      cell: (info) => {
+        return (
+          <ul className="flex flex-col gap-0.5">
+            <li className="">- 姓名: {info.row.original.User.name}</li>
+            <li className="">
+              - 電話:{" "}
+              <span>
+                <a href={`tel:${info.row.original.User.phone}`} className="">
+                  {info.row.original.User.phone}
+                </a>
+              </span>
+            </li>
+            <li className="">
+              - Email:{" "}
+              <span>
+                <a href={`mailto:${info.row.original.User.email}`} className="">
+                  {info.row.original.User.email}
+                </a>
+              </span>
+            </li>
           </ul>
-        ),
-      });
-    } else if (tHead[0] === "recipient") {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => (
-          <ul className="flex flex-col gap-0.5 px-2">
-            <li className="font-bold">{info.getValue()["name"]}</li>
-            <li className="pl-0.5 text-xs">- {info.getValue()["phone"]}</li>
-            <li className="pl-0.5 text-xs">- {info.getValue()["address"]}</li>
+        );
+      },
+    }),
+    columnHelper.accessor("recipient", {
+      id: "recipient",
+      header: () => <span className="">收貨人資訊</span>,
+      cell: (info) => {
+        return (
+          <ul className="flex flex-col gap-0.5">
+            <li className="">- 姓名: {info.row.original.recipientName}</li>
+            <li className="">
+              - 電話:{" "}
+              <span>
+                <a
+                  href={`tel:${info.row.original.recipientPhone}`}
+                  className=""
+                >
+                  {info.row.original.recipientPhone}
+                </a>
+              </span>
+            </li>
+            <li className="">- 地址: {info.row.original.recipientAddress}</li>
           </ul>
-        ),
-      });
-    } else if (tHead[0] === "orderItems") {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => (
-          <ul className="flex flex-col gap-1] text-sm">
-            {info.getValue().map((item: any, index: number) => {
-              return (
-                <li className="" key={`orderitem-${index}`}>
-                  <div className="flex items-center gap-2">
-                    <BiSolidDisc />
-                    <h5 className="font-bold">
-                      {item.name} x{item.quantity}
-                    </h5>
-                  </div>
-                  {item.size && (
-                    <p className="text-fern-60 text-xs pl-4">
-                      - {item.size}, {item.sugar}, {item.ice}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ),
-      });
-    } else if (tHead[0] === "status") {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => (
-          <div className="flex flex-col gap-1 items-center">
-            <h5 className="font-bold">{info.getValue().toUpperCase()}</h5>
-            <div
-              className={`flex flex-col gap-0.5 ${
-                (info.getValue() === "completed" ||
-                  info.getValue() === "canceled") &&
-                "hidden"
-              }`}
-            >
-              <button
-                onClick={() =>
-                  onStatusUpdated(
-                    info.row.original.id,
-                    info.row.original.shippingId,
-                    info.getValue()
-                  )
-                }
-                className="px-4 lg:px-2.5 bg-apricot text-white rounded-lg hover:drop-shadow-lg py-0.5"
-              >
-                更新狀態
-              </button>
-              <button
-                onClick={() =>
-                  onStatusCanceled(
-                    info.row.original.id,
-                    // info.row.original.shippingId
-                    info.getValue()
-                  )
-                }
-                className="px-4 lg:px-2.5 bg-fern-60 text-white rounded-lg hover:drop-shadow-lg py-0.5"
-              >
-                取消訂單
-              </button>
+        );
+      },
+    }),
+    columnHelper.accessor("shipping", {
+      id: "shipping",
+      header: () => <span className="">運送方式</span>,
+      cell: (info) => <span>{shippingOpts[info.getValue()]}</span>,
+    }),
+    columnHelper.accessor("payment", {
+      id: "payment",
+      header: () => <span className="">付款方式</span>,
+      cell: (info) => <span>{paymentOpts[info.getValue()]}</span>,
+    }),
+    columnHelper.accessor("total", {
+      id: "total",
+      header: () => <span className="">總金額</span>,
+      cell: (info) => (
+        <div className="flex flex-col gap-1 items-center">
+          <p>NT${info.getValue().toLocaleString()}</p>
+          <div className="md:hidden">
+            {shippingOpts[info.row.original.shipping]},{" "}
+            {paymentOpts[info.row.original.payment]}
+          </div>
+        </div>
+      ),
+    }),
+    columnHelper.accessor("status", {
+      id: "status",
+      header: () => (
+        <div className="">
+          <span className="hidden md:inline-block">訂單</span>狀態
+        </div>
+      ),
+      cell: (info) => {
+        return (
+          <div className="flex flex-col gap-1 justify-center">
+            <p className="text-center">{orderStatus[info.getValue()]}</p>
+            <div className="flex flex-col gap-0.5">
+              {info.getValue() < 3 && (
+                <button
+                  onClick={() =>
+                    onStatusUpdated(info.row.original.id, info.getValue())
+                  }
+                  className="bg-apricot text-white px-2 py-0.5 rounded-md"
+                >
+                  更新狀態
+                </button>
+              )}
+              {info.getValue() >= 1 ||
+                (info.getValue() !== 4 && (
+                  <button
+                    onClick={() =>
+                      onStatusCanceled(info.row.original.id, info.getValue())
+                    }
+                    className="bg-moss text-white px-2 py-0.5 rounded-md"
+                  >
+                    取消訂單
+                  </button>
+                ))}
             </div>
+            <p className="text-[10px] text-fern-60">
+              最後更新時間:{" "}
+              {dayjs(info.row.original.updatedAt).format("YYYY-MM-DD HH:ss")}
+            </p>
           </div>
-        ),
-      });
-    } else if (tHead[0] === "totalPrice") {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            <div>{info.getValue()}</div>
-            <button
-              className="text-fern-60 hover:text-fern xl:hidden"
-              onClick={() => handleOrderDetail(info.row.original.id)}
-            >
-              <CiCircleMore />
-            </button>
-          </div>
-        ),
-      });
-    } else if (tHead[0] === "discount") {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => (
-          <div className="flex flex-col justify-center items-center gap-2">
-            {info.getValue() ? (
-              <>
-                <div>{info.getValue()["title"]}</div>
-                <div>{info.getValue()["code"]}</div>
-              </>
-            ) : (
-              <div className="text-fern-60 text-sm">未使用折價券</div>
-            )}
-          </div>
-        ),
-      });
-    } else {
-      return columnHelper.accessor(tHead[0], {
-        id: tHead[0],
-        header: () => <span>{tHead[1]}</span>,
-        cell: (info) => <span>{info.getValue()}</span>,
-      });
-    }
-  });
+        );
+      },
+    }),
+    columnHelper.accessor("detail", {
+      id: "detail",
+      header: () => <span className="">細項</span>,
+      cell: (info) => (
+        <button
+          onClick={() => handleOrderDetail(info.row.original.id)}
+          className={
+            modalToggle.status && modalToggle.id === info.row.original.id
+              ? "rotate-180 transition-all"
+              : ""
+          }
+        >
+          <IoIosArrowDown />
+        </button>
+      ),
+    }),
+  ];
 
   const table = useReactTable({
     data: tableData,
@@ -236,13 +263,44 @@ const OrderTable = ({
     debugTable: true,
   });
 
-  const handleOrderDetail = (id: number) => {
-    console.log(id);
-    const order = tableData.find((data) => data.id === id);
-    // console.log(order);
+  const handleOrderDetail = (orderId: number) => {
+    if (modalToggle.status) {
+      setModalToggle((prev) => ({ ...prev, status: false, id: null }));
+      setOrderDetail(null);
+      return;
+    }
+    const order = tableData.find((order) => order.id === orderId);
     if (order) {
-      setModalToggle(true);
-      setOrderDetail(order);
+      setModalToggle((prev) => ({ ...prev, status: true, id: orderId }));
+      const { OrderItems, Discount, productPrice, discountPrice, tax, total } =
+        order;
+
+      const orderItems = OrderItems.map((item) => {
+        return {
+          title: item.Product.title,
+          quantity: item.quantity,
+          size:
+            item.size !== null
+              ? `${sizeOpts[item.size].title} (+NT$${
+                  sizeOpts[item.size].price
+                })`
+              : null,
+          sugar: item.sugar !== null ? sugarOpts[item.sugar] : null,
+          ice: item.ice !== null ? iceOpts[item.ice] : null,
+          price: item.price,
+        };
+      });
+
+      const body = {
+        orderItems,
+        productPrice,
+        discountPrice,
+        discountCode: Discount ? Discount?.Coupon.code : null,
+        tax,
+        total,
+      };
+
+      setOrderDetail(body);
     }
   };
 
@@ -254,23 +312,17 @@ const OrderTable = ({
             return (
               <tr
                 key={headerGroup.id}
-                className={`grid gap-1 grid-cols-4 md:grid-cols-6 xl:grid-cols-11 h-12 leading-12`}
+                className={`grid grid-cols-8 md:grid-cols-10 h-12 leading-12`}
               >
                 {headerGroup.headers.map((header, index) => {
                   return (
                     <th
                       key={header.id}
                       className={`h-12 justify-center items-center cursor-pointer ${
-                        (index === 0 || index === 1 || index === 2) &&
+                        (index === 0 || index === 1 || index === 5) &&
                         "col-span-2"
-                      } 
-
-                      ${
-                        index === 0
-                          ? "hidden md:flex"
-                          : index === 1 || index === 6 || index === 7
-                          ? "flex"
-                          : "hidden xl:flex"
+                      } ${
+                        index === 2 || index === 3 ? "hidden md:flex" : "flex"
                       }
                       `}
                       {...{
@@ -288,39 +340,95 @@ const OrderTable = ({
             );
           })}
         </thead>
-        <tbody className="">
+        <tbody className="text-xs md:text-md">
           {table.getRowModel().rows.map((row, index) => {
+            const orderId = row.original.id;
             return (
-              <tr
-                className={`py-2 grid gap-1 grid-cols-4 md:grid-cols-6 xl:grid-cols-11 ${
-                  index !== 0 && "border-t-[0.5px] border-fern-30"
-                }`}
-                key={row.id}
-              >
-                {row.getVisibleCells().map((cell, index) => {
-                  return (
-                    <td
-                      className={`${
-                        index === 0 || index === 1 || index === 2
-                          ? "col-span-2"
-                          : "justify-center"
-                      } ${
-                        index === 0
-                          ? "hidden md:flex"
-                          : index === 1 || index === 6 || index === 7
-                          ? "flex"
-                          : "hidden xl:flex"
-                      } items-center px-2`}
-                      key={cell.id}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
+              <>
+                <tr
+                  className={`py-2 grid gap-1 grid-cols-8 md:grid-cols-10 ${
+                    index !== 0 && "border-t-[0.5px] border-fern-30"
+                  } ${
+                    modalToggle.status && modalToggle.id === orderId
+                      ? "bg-ivory"
+                      : "bg-white"
+                  }`}
+                  key={row.id}
+                >
+                  {row.getVisibleCells().map((cell, index) => {
+                    return (
+                      <td
+                        className={`items-center ${
+                          index === 0 || index === 1
+                            ? "col-span-2"
+                            : "justify-center"
+                        } ${index === 5 && "col-span-2"} ${
+                          index === 2 || index === 3 ? "hidden md:flex" : "flex"
+                        }`}
+                        key={cell.id}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+                {modalToggle.status && modalToggle.id === orderId && (
+                  <div className="bg-white p-2 md:px-4 text-xs md:text-sm flex flex-col gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      {orderDetail?.orderItems.map(
+                        (
+                          { title, quantity, size, sugar, ice, price },
+                          index
+                        ) => {
+                          return (
+                            <div
+                              className="grid grid-cols-[1fr_1.5fr_0.5fr]"
+                              key={`order-detail-${index}`}
+                            >
+                              <div>
+                                {title} *{quantity}
+                              </div>
+                              <div>
+                                {size !== null &&
+                                  sugar !== null &&
+                                  ice !== null &&
+                                  `${size}, ${sugar}, ${ice}`}
+                              </div>
+                              <div className="">
+                                NT${price.toLocaleString()}
+                              </div>
+                            </div>
+                          );
+                        }
                       )}
-                    </td>
-                  );
-                })}
-              </tr>
+                    </div>
+                    <div className="flex justify-between items-center gap-1 bg-natural text-white py-1 px-2 text-xs">
+                      <div>
+                        商品價格: <br className="md:hidden" /> NT$
+                        {orderDetail?.productPrice}
+                      </div>
+                      <div>
+                        稅: <br className="md:hidden" />
+                        NT${orderDetail?.tax}
+                      </div>
+                      <div>
+                        折扣: <br className="md:hidden" />
+                        -NT${orderDetail?.discountPrice}
+                        <br className="md:hidden" />
+                        {orderDetail?.discountCode &&
+                          `(${orderDetail?.discountCode})`}
+                      </div>
+                      <div>
+                        總計: <br className="md:hidden" />
+                        NT${orderDetail?.total}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             );
           })}
         </tbody>
@@ -364,7 +472,7 @@ const OrderTable = ({
           </button>
         </div>
       </div>
-      {modalToggle && (
+      {/* {modalToggle && (
         <StaffModals
           title="訂單詳細資料"
           onClose={() => {
@@ -460,7 +568,7 @@ const OrderTable = ({
             </div>
           </div>
         </StaffModals>
-      )}
+      )} */}
     </>
   );
 };

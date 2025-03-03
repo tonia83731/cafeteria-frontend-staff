@@ -14,13 +14,10 @@ import DatePicker from "react-datepicker";
 import StaffModals from "../layout/StaffModals";
 import DefaultInput from "../input/DefaultInput";
 import DefaultTextareaInput from "../input/DefaultTextareaInput";
-import { RxCross2 } from "react-icons/rx";
 import { MdError } from "react-icons/md";
 import { toast } from "react-toastify";
-// import { category_dummy } from "@/dummy/category_dummy";
 interface I_StaffProductModals {
   type: "create" | "edit" | null;
-  categories: any;
   coupon: any;
   onModalClose: () => void;
   onFormSubmit: (
@@ -29,53 +26,32 @@ interface I_StaffProductModals {
     couponId: number | null
   ) => Promise<{ status: boolean; message: string } | undefined>;
 }
-type DateRangeType = {
-  startDate: Date | null;
-  endDate: Date | null;
-};
+
 const discountType_options = [
   {
-    value: "percent",
+    value: 0,
     label: "百分比折扣",
   },
   {
-    value: "price",
+    value: 1,
     label: "金額折扣",
   },
 ];
 const CouponModals = ({
   type,
-  categories,
   coupon,
   onModalClose,
   onFormSubmit,
 }: I_StaffProductModals) => {
-  // const token = getCookie("adminToken");
-  const category_options = categories.map(
-    ({ id, title }: { id: number; title: string }) => {
-      return {
-        value: id,
-        label: title,
-      };
-    }
-  );
-
   const discountTypeRef = useRef<any>(null);
-  const categoryRef = useRef<any>(null);
-  const [dateRange, setDateRange] = useState<DateRangeType>({
-    startDate: new Date(),
-    endDate: null,
-  });
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [inputValue, setInputValue] = useState({
-    title_zh: "",
+    title: "",
     title_en: "",
-    description_zh: "",
+    description: "",
     description_en: "",
     code: "",
-    // discountType,
     discountValue: 0,
-    minSpend: 0,
-    // categoryId,
   });
   const [isError, setIsError] = useState({
     status: false,
@@ -92,24 +68,19 @@ const CouponModals = ({
 
   const initializedInput = () => {
     setInputValue({
-      title_zh: "",
+      title: "",
       title_en: "",
-      description_zh: "",
+      description: "",
       description_en: "",
       code: "",
       discountValue: 0,
-      minSpend: 0,
     });
-    setDateRange({
-      startDate: new Date(),
-      endDate: null,
-    });
+    setEndDate(null);
     setIsError({
       status: false,
       message: "",
     });
     if (discountTypeRef.current) discountTypeRef.current.value = null;
-    if (categoryRef.current) categoryRef.current.value = null;
   };
 
   const handleModalClose = () => {
@@ -123,20 +94,21 @@ const CouponModals = ({
       message: "",
     });
     const {
-      title_zh,
+      title,
       title_en,
-      description_zh,
+      description,
       description_en,
       code,
       discountValue,
-      minSpend,
     } = inputValue;
-    const { startDate, endDate } = dateRange;
-    const discountType = discountTypeRef.current?.props.value;
-    const category = categoryRef.current?.props.value;
-    // console.log(discountType, category);
+    const date = new Date(endDate as Date);
+    date.setHours(23, 59, 59);
+    const curr_timestamp = Date.now();
+    const timestamp = date.getTime();
 
-    if (title_zh === "" || title_en === "") {
+    const discountType = discountTypeRef.current?.props.value;
+
+    if (title === "" || title_en === "") {
       setIsError({
         status: true,
         message: "優惠券名稱(zh, en)不可空白!",
@@ -150,7 +122,7 @@ const CouponModals = ({
       });
       return;
     }
-    if (description_zh.length > 150 || description_en.length > 150) {
+    if (description.length > 150 || description_en.length > 150) {
       setIsError({
         status: true,
         message: "優惠券介紹需介於1-150字之間!",
@@ -194,7 +166,7 @@ const CouponModals = ({
       return;
     }
 
-    if (startDate && endDate && (startDate > endDate || endDate < new Date())) {
+    if (timestamp && timestamp < curr_timestamp) {
       setIsError({
         status: true,
         message: "有效日期無效!",
@@ -203,17 +175,14 @@ const CouponModals = ({
     }
 
     const body = {
-      title_zh,
+      title,
       title_en,
-      description_zh,
+      description,
       description_en,
       code,
-      startDate,
-      endDate,
+      endDate: timestamp / 1000,
       discountType: discountType.value,
       discountValue,
-      ...(category ? { categoryId: category.value } : {}),
-      ...(minSpend ? { categoryId: minSpend } : {}),
     };
 
     const couponId = type === "edit" ? coupon.id : null;
@@ -231,32 +200,20 @@ const CouponModals = ({
   useEffect(() => {
     if (!coupon || type !== "edit") return;
     setInputValue({
-      title_zh: coupon.title.zh || "",
-      title_en: coupon.title.en || "",
-      description_zh: coupon.description.zh || "",
-      description_en: coupon.description.en || "",
+      title: coupon.title || "",
+      title_en: coupon.title_en || "",
+      description: coupon.description || "",
+      description_en: coupon.description_en || "",
       code: coupon.code || "",
       discountValue: coupon.discountValue || 0,
-      minSpend: coupon.minSpend || 0,
     });
 
-    setDateRange({
-      startDate: coupon.startDate ? new Date(coupon.startDate) : new Date(),
-      endDate: coupon.endDate ? new Date(coupon.endDate) : null,
-    });
+    setEndDate(coupon.endDate ? new Date(coupon.endDate * 1000) : null);
 
     if (coupon.discountType) {
-      const curr_type = discountType_options.find((option) => {
-        return option.value === coupon.discountType;
-      });
+      const curr_type = discountType_options[coupon.discountType];
+      console.log(curr_type);
       discountTypeRef.current.setValue(curr_type);
-    }
-
-    if (coupon.categoryId) {
-      const curr_cate = category_options.find(
-        (option: any) => option.value === coupon.categoryId
-      );
-      categoryRef.current.setValue(curr_cate);
     }
   }, [coupon, type]);
 
@@ -272,10 +229,10 @@ const CouponModals = ({
             <div className="flex flex-col gap-4 md:grid md:grid-cols-2">
               <DefaultInput
                 label="優惠券名稱"
-                id="title_zh"
-                name="title_zh"
+                id="title"
+                name="title"
                 placeholder="請輸入優惠券名稱"
-                value={inputValue.title_zh}
+                value={inputValue.title}
                 onInputChange={handleInputChange}
               />
               <DefaultInput
@@ -302,16 +259,14 @@ const CouponModals = ({
                 </label>
                 <DatePicker
                   className="w-full border border-fern rounded-lg h-10 leading-10 text-fern placeholder:text-fern-30 placeholder:text-sm px-4"
-                  selected={dateRange.startDate}
-                  onChange={(dates) => {
-                    const [start, end] = dates;
-                    setDateRange({ startDate: start, endDate: end });
+                  selected={endDate}
+                  onChange={(date) => {
+                    console.log(date);
+                    setEndDate(date);
                   }}
+                  dateFormat="YYYY-MM-dd"
                   minDate={new Date()}
-                  selectsRange
-                  startDate={dateRange.startDate as Date}
-                  endDate={dateRange.endDate as Date}
-                  placeholderText="選擇日期範圍"
+                  placeholderText="選擇日期"
                 />
               </div>
             </div>
@@ -332,55 +287,19 @@ const CouponModals = ({
                 label="折扣金額"
                 id="discountValue"
                 name="discountValue"
+                type="number"
                 placeholder="請輸入折扣金額"
                 value={inputValue.discountValue}
                 onInputChange={handleInputChange}
               />
             </div>
-            <div className="flex flex-col gap-4 md:grid md:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="category" className="text-base font-medium">
-                  折扣類別
-                </label>
-                <div className="relative">
-                  <Select
-                    id="category"
-                    // isClearable
-                    ref={categoryRef}
-                    options={category_options}
-                    styles={SELECTSTYLES}
-                    placeholder="請選擇折扣類別"
-                  />
-                  <button
-                    onClick={() => {
-                      if (categoryRef.current) {
-                        categoryRef.current.clearValue();
-                      }
-                    }}
-                    className="absolute top-1/2 right-2 -translate-y-1/2"
-                  >
-                    <RxCross2 />
-                  </button>
-                </div>
-              </div>
-              <DefaultInput
-                label="優惠券最低使用金額"
-                type="number"
-                id="minSpend"
-                name="minSpend"
-                placeholder="請輸入最低使用金額"
-                value={inputValue.minSpend}
-                onInputChange={handleInputChange}
-              />
-            </div>
-
             <div className="flex flex-col gap-4">
               <DefaultTextareaInput
                 label="優惠券介紹"
-                id="description_zh"
-                name="description_zh"
+                id="description"
+                name="description"
                 placeholder="請輸入優惠券介紹"
-                value={inputValue.description_zh}
+                value={inputValue.description}
                 onInputChange={handleInputChange}
               />
               <DefaultTextareaInput

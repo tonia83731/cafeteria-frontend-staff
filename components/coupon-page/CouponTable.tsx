@@ -8,6 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import dayjs from "dayjs";
 import { useState } from "react";
 import {
   MdOutlineKeyboardArrowLeft,
@@ -15,34 +16,32 @@ import {
   MdOutlineKeyboardDoubleArrowLeft,
   MdOutlineKeyboardDoubleArrowRight,
 } from "react-icons/md";
-import Image from "next/image";
 
-type ProductTableType = {
+type CouponTableType = {
   id: number;
-  categoryCode: string;
-  title: {
-    zh: string;
-    en: string;
-  };
-  description: {
-    zh: string;
-    en: string;
-  };
-  price: number;
+  title: string;
+  title_en: string;
+  description: string;
+  description_en: string;
+  code: string;
+  endDate: number;
+  discountType: string;
+  discountValue: number;
+  isPublished: boolean;
 };
 
-const ProductTable = ({
+const CouponTable = ({
   tableData,
   language,
-  onProductEdit,
-  onProductDelete,
-  onProductPublished,
+  onCouponEdit,
+  onCouponDelete,
+  onCouponPublished,
 }: {
-  tableData: ProductTableType[];
+  tableData: CouponTableType[];
   language: "zh" | "en";
-  onProductEdit: (id: number) => void;
-  onProductDelete: (id: number) => void;
-  onProductPublished: (id: number, isPublished: boolean) => void;
+  onCouponEdit: (id: number) => void;
+  onCouponDelete: (id: number) => void;
+  onCouponPublished: (id: number, isPublished: boolean) => void;
 }) => {
   const [sourceSorting, setSourceSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -51,49 +50,52 @@ const ProductTable = ({
   });
 
   const columnHelper = createColumnHelper<any>();
-
   const columns = [
-    columnHelper.accessor("image", {
-      id: "image",
-      header: () => <span className="">產品圖片</span>,
-      cell: (info) => {
-        const src = info.getValue();
-        return (
-          <Image
-            src={src as string}
-            alt="product-image"
-            width={300}
-            height={300}
-            className="w-[60px] h-[60px] object-cover"
-          ></Image>
-        );
-      },
-    }),
-    columnHelper.accessor("categoryCode", {
-      id: "categoryCode",
-      header: () => <span>產品類別</span>,
-      cell: (info) => info.getValue(),
-    }),
     columnHelper.accessor("title", {
       id: "title",
-      header: () => <span>產品名稱</span>,
-      cell: (info) => {
-        const title = info.getValue();
-        return <span>{title[language]}</span>;
-      },
+      header: () => <span>優惠券簡介</span>,
+      cell: (info) => (
+        <div className="flex flex-col gap-1">
+          <div className="font-bold">
+            {language === "en" ? info.row.original.title_en : info.getValue()}
+          </div>
+          <p className="text-[10px]">
+            {language === "en"
+              ? info.row.original.description_en
+              : info.row.original.description}
+          </p>
+        </div>
+      ),
     }),
-    columnHelper.accessor("description", {
-      id: "description",
-      header: () => <span className="">產品敘述</span>,
-      cell: (info) => {
-        const description = info.getValue();
-        return <span className="text-xs">{description[language]}</span>;
-      },
+    columnHelper.accessor("code", {
+      id: "code",
+      header: () => <span>優惠券代碼</span>,
+      cell: (info) => (
+        <div className="flex flex-col justify-center gap-1">
+          <p>{info.getValue()}</p>
+          <p className="md:hidden text-xs">
+            {dayjs(info.row.original.endDate * 1000).format("YYYY-MM-DD")}
+          </p>
+        </div>
+      ),
     }),
-    columnHelper.accessor("price", {
-      id: "price",
-      header: () => <span>產品價格</span>,
-      cell: (info) => <span>NT${info.getValue().toLocaleString()}</span>,
+    columnHelper.accessor("endDate", {
+      id: "endDate",
+      header: () => <span>截止日期</span>,
+      cell: (info) => (
+        <span>{dayjs(info.getValue() * 1000).format("YYYY-MM-DD")}</span>
+      ),
+    }),
+    columnHelper.accessor("discount", {
+      id: "discount",
+      header: () => <span>折扣</span>,
+      cell: (info) => (
+        <span>
+          {info.row.original.discountType === 0
+            ? `${(100 - info.row.original.discountValue) / 10}折`
+            : `-${info.row.original.discountValue}元`}
+        </span>
+      ),
     }),
     columnHelper.accessor("note", {
       id: "note",
@@ -101,29 +103,31 @@ const ProductTable = ({
       cell: (info) => {
         return (
           <div className="flex flex-col gap-2 text-white lg:flex-row lg:items-center">
-            <button
-              className="px-2 py-0.5 rounded-md bg-brown disabled:bg-default-gray"
-              disabled={info.row.original.isPublished}
-              onClick={() =>
-                onProductPublished(
-                  info.row.original.id,
-                  info.row.original.isPublished
-                )
-              }
-            >
-              {info.row.original.isPublished ? "取消發布" : "發布"}
-            </button>
+            {!info.row.original.isPublished && (
+              <button
+                className="px-2 py-0.5 rounded-md bg-brown disabled:bg-default-gray"
+                disabled={info.row.original.isPublished}
+                onClick={() =>
+                  onCouponPublished(
+                    info.row.original.id,
+                    info.row.original.isPublished
+                  )
+                }
+              >
+                發布
+              </button>
+            )}
             <button
               className="px-2 py-0.5 rounded-md bg-apricot disabled:bg-default-gray"
               disabled={info.row.original.isPublished}
-              onClick={() => onProductEdit(info.row.original.id)}
+              onClick={() => onCouponEdit(info.row.original.id)}
             >
               修改
             </button>
             <button
               className="px-2 py-0.5 rounded-md bg-moss disabled:bg-default-gray"
               disabled={info.row.original.isPublished}
-              onClick={() => onProductDelete(info.row.original.id)}
+              onClick={() => onCouponDelete(info.row.original.id)}
             >
               刪除
             </button>
@@ -132,10 +136,9 @@ const ProductTable = ({
       },
     }),
   ];
-
   const table = useReactTable({
     data: tableData,
-    columns: columns,
+    columns,
     state: {
       sorting: sourceSorting,
       pagination,
@@ -147,32 +150,26 @@ const ProductTable = ({
     onPaginationChange: setPagination,
     debugTable: true,
   });
-
   return (
     <>
       <table className="">
         <thead className="bg-fern text-ivory h-12 text-xs md:text-sm">
           {table.getHeaderGroups().map((headerGroup) => {
-            // console.log(headerGroup.headers.length);
             return (
               <tr
                 key={headerGroup.id}
-                className={`grid grid-cols-4 md:grid-cols-7 h-12 leading-12`}
+                className={`grid grid-cols-6 h-12 leading-12`}
               >
                 {headerGroup.headers.map((header, index) => {
-                  const handleClick =
-                    index === 0 || index === 1 || index === 3
-                      ? header.column.getToggleSortingHandler()
-                      : undefined;
                   return (
                     <th
                       key={header.id}
-                      className={`h-12 justify-center items-center ${
-                        index === 3 && "md:col-span-2"
-                      } ${
-                        index === 0 || index === 3 ? "hidden md:flex" : "flex"
+                      className={`flex justify-center items-center ${
+                        index === 0 && "col-span-2"
+                      } ${index === 1 && "col-span-2 md:col-span-1"} ${
+                        index === 2 && "hidden md:flex"
                       }`}
-                      onClick={handleClick}
+                      onClick={header.column.getToggleSortingHandler()}
                     >
                       {flexRender(
                         header.column.columnDef.header,
@@ -185,22 +182,22 @@ const ProductTable = ({
             );
           })}
         </thead>
-        <tbody className="h-24 text-xs md:text-sm">
+        <tbody className="text-xs md:text-sm">
           {table.getRowModel().rows.map((row, index) => {
             return (
               <tr
-                className={`h-24 grid grid-cols-4 md:grid-cols-7 ${
+                className={`grid grid-cols-6 ${
                   index !== 0 && "border-t-[0.5px] border-fern-30"
-                }`}
+                } py-1`}
                 key={row.id}
               >
                 {row.getVisibleCells().map((cell, index) => {
                   return (
                     <td
-                      className={`h-24 items-center ${
-                        index === 3 ? "md:col-span-2" : "justify-center"
-                      } ${
-                        index === 0 || index === 3 ? "hidden md:flex" : "flex"
+                      className={`flex items-center ${
+                        index === 0 ? "col-span-2 px-2" : "justify-center"
+                      } ${index === 1 && "col-span-2 md:col-span-1"} ${
+                        index === 2 && "hidden md:flex"
                       }`}
                       key={cell.id}
                     >
@@ -259,4 +256,4 @@ const ProductTable = ({
   );
 };
 
-export default ProductTable;
+export default CouponTable;
