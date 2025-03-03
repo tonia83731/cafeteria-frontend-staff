@@ -100,10 +100,10 @@ const ProductTable = ({
       header: () => <span>#</span>,
       cell: (info) => {
         return (
-          <div className="flex flex-col gap-2 text-white lg:flex-row lg:items-center">
+          <div className="w-full flex flex-col gap-2 text-white lg:flex-row lg:items-center">
             <button
-              className="px-2 py-0.5 rounded-md bg-brown disabled:bg-default-gray"
-              disabled={info.row.original.isPublished}
+              className="w-full px-2 py-0.5 rounded-md bg-brown disabled:bg-default-gray"
+              // disabled={info.row.original.isPublished}
               onClick={() =>
                 onProductPublished(
                   info.row.original.id,
@@ -114,14 +114,14 @@ const ProductTable = ({
               {info.row.original.isPublished ? "取消發布" : "發布"}
             </button>
             <button
-              className="px-2 py-0.5 rounded-md bg-apricot disabled:bg-default-gray"
-              disabled={info.row.original.isPublished}
+              className="w-full px-2 py-0.5 rounded-md bg-apricot disabled:bg-default-gray"
+              // disabled={info.row.original.isPublished}
               onClick={() => onProductEdit(info.row.original.id)}
             >
               修改
             </button>
             <button
-              className="px-2 py-0.5 rounded-md bg-moss disabled:bg-default-gray"
+              className="w-full px-2 py-0.5 rounded-md bg-moss disabled:bg-default-gray"
               disabled={info.row.original.isPublished}
               onClick={() => onProductDelete(info.row.original.id)}
             >

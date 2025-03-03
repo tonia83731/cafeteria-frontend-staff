@@ -110,12 +110,14 @@ const DashboardProductsPage = ({ categories, products }: any) => {
   };
 
   const handleProductDelete = async (productId: number) => {
-    // console.log(productId);
     try {
-      const response = await clientFetch(`/admin/products/${productId}`, {
-        method: "DELETE",
-        token,
-      });
+      const response = await clientFetch(
+        `/admin/products/${productId}/deleted`,
+        {
+          method: "DELETE",
+          token,
+        }
+      );
       if (response.success) {
         toast.success("產品刪除成功!");
         const update_products = products.filter(
@@ -138,20 +140,38 @@ const DashboardProductsPage = ({ categories, products }: any) => {
     if (type === "create") {
       try {
         setLoading(true);
-        const response = await clientFetch("/admin/products", {
+        const response = await clientFetch("/admin/products/add", {
           method: "POST",
           body: formData,
           token,
         });
         if (response.success) {
           setLoading(false);
-          const { id, categoryCode, title, description, price } = response.data;
-          const new_product = {
+          const {
             id,
+            image,
             categoryCode,
             title,
+            title_en,
             description,
+            description_en,
             price,
+            isPublished,
+          } = response.data;
+          const new_product = {
+            id,
+            image,
+            categoryCode,
+            title: {
+              zh: title,
+              en: title_en,
+            },
+            description: {
+              zh: description,
+              en: description_en,
+            },
+            price,
+            isPublished,
           };
           setTableProducts([...tableProducts, new_product]);
           return {
@@ -177,20 +197,41 @@ const DashboardProductsPage = ({ categories, products }: any) => {
       if (!productId) return;
       try {
         setLoading(true);
-        const response = await clientFetch(`/admin/products/${productId}`, {
-          method: "PUT",
-          body: formData,
-          token,
-        });
+        const response = await clientFetch(
+          `/admin/products/${productId}/updated`,
+          {
+            method: "PUT",
+            body: formData,
+            token,
+          }
+        );
         if (response.success) {
           setLoading(false);
-          const { id, categoryCode, title, description, price } = response.data;
-          const update_product = {
+          const {
             id,
+            image,
             categoryCode,
             title,
+            title_en,
             description,
+            description_en,
             price,
+            isPublished,
+          } = response.data;
+          const update_product = {
+            id,
+            image,
+            categoryCode,
+            title: {
+              zh: title,
+              en: title_en,
+            },
+            description: {
+              zh: description,
+              en: description_en,
+            },
+            price,
+            isPublished,
           };
           setTableProducts((prevProducts: any) =>
             prevProducts.map((product: any) =>
@@ -223,13 +264,35 @@ const DashboardProductsPage = ({ categories, products }: any) => {
   const handleProductPublished = async (
     productId: number,
     isPublished: boolean
-  ) => {};
+  ) => {
+    try {
+      const response = await clientFetch(
+        `/admin/products/${productId}/published`,
+        {
+          method: "PATCH",
+          token,
+        }
+      );
+
+      if (response.success) {
+        const updated_product = tableProducts.map((product: any) => {
+          return product.id === productId
+            ? { ...product, isPublished: !isPublished }
+            : product;
+        });
+        setTableProducts(updated_product);
+        toast.success("已成功更新產品發布狀態");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="mb-4 gap-4 flex justify-between items-center">
         <h1 className="text-2xl md:text-4xl font-bold">產品列表</h1>
         <div className="flex items-center gap-2">
-          {/* <StaffProductModals type="create" /> */}
           <button
             onClick={() => {
               setModalToggle(true);
@@ -262,7 +325,6 @@ const DashboardProductsPage = ({ categories, products }: any) => {
           onClearClick={handleClearClick}
         />
       </div>
-      {/* <div className=""></div> */}
       <ProductTable
         tableData={tableProducts}
         language={language.value}

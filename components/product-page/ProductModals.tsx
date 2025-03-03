@@ -19,18 +19,9 @@ const handleOptions = (datas: any[]) => {
     value: id,
   }));
 };
-
-// type SelectOptionsType = {
-//   label: string;
-//   value: number;
-// };
-
 interface I_StaffProductModals {
   type: "create" | "edit" | null;
   categories: any;
-  // sizes: any;
-  // sugars: any;
-  // ices: any;
   product: null | any;
   isLoading: boolean;
   onModalClose: () => void;
@@ -55,9 +46,9 @@ const ProductModals = ({
   const category_options = handleOptions(categories);
   const categoryRef = useRef<any>(null);
   const [inputValue, setInputValue] = useState({
-    title_zh: "",
+    title: "",
     title_en: "",
-    description_zh: "",
+    description: "",
     description_en: "",
     price: 0,
   });
@@ -110,10 +101,9 @@ const ProductModals = ({
 
     // const categoryId = categoryOptions?.value;
     const category = categoryRef.current?.props.value;
-    const { title_zh, title_en, description_zh, description_en, price } =
-      inputValue;
+    const { title, title_en, description, description_en, price } = inputValue;
 
-    if (title_zh === "" || title_en === "") {
+    if (title === "" || title_en === "") {
       setIsError({
         status: true,
         message: "產品名稱(zh, en)不可空白!",
@@ -137,18 +127,18 @@ const ProductModals = ({
       return;
     }
 
-    if (description_zh.length > 150 || description_en.length > 150) {
+    if (description.length > 300 || description_en.length > 300) {
       setIsError({
         status: true,
-        message: "產品介紹需介於1-150字之間!",
+        message: "產品介紹需介於1-300字之間!",
       });
       return;
     }
 
     const formData = new FormData();
-    formData.append("title_zh", title_zh);
+    formData.append("title", title);
     formData.append("title_en", title_en);
-    formData.append("description_zh", description_zh);
+    formData.append("description", description);
     formData.append("description_en", description_en);
     formData.append("price", price.toString());
     formData.append("categoryId", category.value.toString());
@@ -172,9 +162,9 @@ const ProductModals = ({
   const initializedData = () => {
     onModalClose();
     setInputValue({
-      title_zh: "",
+      title: "",
       title_en: "",
-      description_zh: "",
+      description: "",
       description_en: "",
       price: 0,
     });
@@ -191,10 +181,10 @@ const ProductModals = ({
     if (type === "create") return;
     if (!product) return;
     setInputValue({
-      title_zh: product.title.zh || "",
-      title_en: product.title.en || "",
-      description_zh: product.description.zh || "",
-      description_en: product.description.en || "",
+      title: product.title || "",
+      title_en: product.title_en || "",
+      description: product.description || "",
+      description_en: product.description_en || "",
       price: product.price || 0,
     });
 
@@ -255,10 +245,10 @@ const ProductModals = ({
           <div className="flex flex-col gap-4 md:grid md:grid-cols-2">
             <DefaultInput
               label="產品名稱"
-              id="title_zh"
-              name="title_zh"
+              id="title"
+              name="title"
               placeholder="請輸入產品名稱"
-              value={inputValue.title_zh}
+              value={inputValue.title}
               onInputChange={handleInputChange}
             />
             <DefaultInput
@@ -296,10 +286,10 @@ const ProductModals = ({
           <div className="flex flex-col gap-4">
             <DefaultTextareaInput
               label="產品介紹"
-              id="description_zh"
-              name="description_zh"
+              id="description"
+              name="description"
               placeholder="請輸入產品介紹"
-              value={inputValue.description_zh}
+              value={inputValue.description}
               onInputChange={handleInputChange}
             />
             <DefaultTextareaInput
