@@ -50,15 +50,18 @@ export const clientFetch = async (url: string, options: FetchOptions = {}) => {
   try {
     const isFormData = body instanceof FormData;
 
-    const response = await fetch(`${process.env.API_URL}/api${url}`, {
-      method,
-      headers: {
-        ...(isFormData ? {} : { "Content-Type": "application/json" }),
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...headers,
-      },
-      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
-    });
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api${url}`,
+      {
+        method,
+        headers: {
+          ...(isFormData ? {} : { "Content-Type": "application/json" }),
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...headers,
+        },
+        body: isFormData ? body : body ? JSON.stringify(body) : undefined,
+      }
+    );
 
     const data = await response.json();
 
