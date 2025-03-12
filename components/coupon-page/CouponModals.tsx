@@ -212,7 +212,6 @@ const CouponModals = ({
 
     if (coupon.discountType) {
       const curr_type = discountType_options[coupon.discountType];
-      console.log(curr_type);
       discountTypeRef.current.setValue(curr_type);
     }
   }, [coupon, type]);
@@ -278,6 +277,7 @@ const CouponModals = ({
                 <Select
                   id="discountType"
                   ref={discountTypeRef}
+                  value={discountType_options[coupon.discountType] || null}
                   options={discountType_options}
                   styles={SELECTSTYLES}
                   placeholder="請選擇折扣類型"
