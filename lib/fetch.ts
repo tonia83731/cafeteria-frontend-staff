@@ -50,7 +50,7 @@ export const clientFetch = async (url: string, options: FetchOptions = {}) => {
   try {
     const isFormData = body instanceof FormData;
 
-    const response = await fetch(url, {
+    const response = await fetch(`${process.env.API_URL}/api${url}`, {
       method,
       headers: {
         ...(isFormData ? {} : { "Content-Type": "application/json" }),
