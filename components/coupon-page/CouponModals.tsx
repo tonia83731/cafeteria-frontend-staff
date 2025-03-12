@@ -277,7 +277,11 @@ const CouponModals = ({
                 <Select
                   id="discountType"
                   ref={discountTypeRef}
-                  value={discountType_options[coupon.discountType] || null}
+                  value={
+                    coupon && coupon.discountType !== undefined
+                      ? discountType_options[coupon.discountType]
+                      : null
+                  }
                   options={discountType_options}
                   styles={SELECTSTYLES}
                   placeholder="請選擇折扣類型"
